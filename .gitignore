@@ -1,0 +1,8 @@
+env
+src/build
+src/dist
+*.log
+*.spec
+*.zip
+test.py
+test_access.test

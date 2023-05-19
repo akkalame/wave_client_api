@@ -617,7 +617,7 @@ class CheckUser(QtWidgets.QDialog):
         else:
             self.reject()
 
-class newCustomerForm(QtWidgets.QWidget):
+class NewCustomerForm(QtWidgets.QWidget):
     def __init__(self, parent, client):
         super().__init__()
         self.parent = parent
@@ -743,6 +743,65 @@ class newCustomerForm(QtWidgets.QWidget):
         provincesList = provinces[self.combo_countryCode.currentData()]
         for name, code in provincesList:
             self.combo_provinceCode.addItem(name, code)
+
+class NewItemForm(QtWidgets.QWidget):
+    def __init__(self, parent, client):
+        super().__init__()
+        self.parent = parent
+        self.client = client
+
+        # cargar los estilos
+        with open('src/estilos.css', mode='r') as f:
+            estilos = f.read()
+        self.setStyleSheet(estilos)
+
+        self.initUI()
+
+        self.load_information()
+
+    def initUI(self):
+        self.setWindowTitle('New Item')
+        self.setGeometry(200, 200, 400, 300)
+  
+        layout = QtWidgets.QVBoxLayout()
+        self.setLayout(layout)
+
+        # Campos de texto
+        self.label_name = QtWidgets.QLabel('Name:')
+        self.text_name = QtWidgets.QLineEdit()
+
+        self.label_description = QtWidgets.QLabel('Description:')
+        self.text_description = QtWidgets.QLineEdit()
+
+        self.label_unitPrice = QtWidgets.QLabel('Unit Price:')
+        self.text_unitPrice = QtWidgets.QLineEdit()
+
+        # Combo box para seleccionar país
+        self.label_account = QtWidgets.QLabel('Account:')
+        self.combo_account = QtWidgets.QComboBox()
+
+        # boton para crear el customer
+        confirmBtn = QtWidgets.QPushButton("Confirm")
+        confirmBtn.clicked.connect(self.confirm)
+
+        layout.addWidget(self.label_account)
+        layout.addWidget(self.combo_account)
+        layout.addWidget(self.label_name)
+        layout.addWidget(self.text_name)
+        layout.addWidget(self.label_description)
+        layout.addWidget(self.text_description)
+        layout.addWidget(self.label_unitPrice)
+        layout.addWidget(self.text_unitPrice)
+        
+        layout.addWidget(confirmBtn)
+
+    def confirm(self):
+        self.client.send_new_item(self.parent)
+
+    def load_information(self):
+        data = self.client.get_accounts(self.parent, True)
+        for d in data:
+            self.combo_account.addItem(d['name'], d['id'])
 
 class App(QtWidgets.QWidget):
     def __init__(self):
@@ -884,6 +943,9 @@ class App(QtWidgets.QWidget):
         # Crear botón para agregar nuevo producto
         self.addItemBtn = QtWidgets.QPushButton("Add Item")
         self.addItemBtn.clicked.connect(self.add_product)
+        # botón para crear nuevos productos
+        self.newItemBtn = QtWidgets.QPushButton("New Item")
+        self.newItemBtn.clicked.connect(self.new_item)
 
         # Crear la tabla
         self.itemsTable = QtWidgets.QTableWidget()
@@ -946,6 +1008,7 @@ class App(QtWidgets.QWidget):
         left_layout.addWidget(self.itemsLabel, 7, 0)
         left_layout.addWidget(self.itemsCBox, 7, 1)
         left_layout.addWidget(self.addItemBtn, 7,2)
+        left_layout.addWidget(self.newItemBtn, 7,3)
         left_layout.addWidget(self.itemsTable, 8, 0, 1, 2)
         left_layout.addWidget(self.attachPDFCheck, 9,0)
         left_layout.addWidget(self.send_button, 9, 1)
@@ -1034,8 +1097,12 @@ class App(QtWidgets.QWidget):
         self.client.add_item(self)
     
     def new_customer(self):
-        newCustomerFrm = newCustomerForm(self, self.client)
+        newCustomerFrm = NewCustomerForm(self, self.client)
         self.client.new_customer(self, newCustomerFrm) 
+
+    def new_item(self):
+        newItemFrm = NewItemForm(self, self.client)
+        self.client.new_item(self, newItemFrm) 
 
     # en caso de que la cantidad de recipientes sea mayor al nro de names, address o cc
     # entonces se igualan en numero

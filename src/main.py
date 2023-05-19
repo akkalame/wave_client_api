@@ -222,6 +222,52 @@ class Client():
 			self.get_customers(ui)
 			self.newCustomerFrm.close()
 
+	def get_accounts(self, ui, onlyData=None):
+		accessToken = ui.fullAccessEntry.text()
+		businessId = self.businessIds[ui.businessCBox.currentIndex()]['id']
+
+		response = waveClient.get_accounts(accessToken, businessId)
+		if onlyData:
+			if response['errors']:
+				print('Errors: ', response['errors'])
+			else:
+				return response['data'][::-1]
+
+	def new_item(self, ui, form):
+		if ui.businessCBox.currentIndex() in self.businessIds:
+			self.newItemFrm = form
+			self.newItemFrm.show()
+
+	def send_new_item(self, ui):
+		itemName = self.newItemFrm.text_name.text() 
+		itemDescription = self.newItemFrm.text_description.text()
+		itemPrice = self.newItemFrm.text_unitPrice.text()
+		accountId = self.newItemFrm.combo_account.currentData()
+
+		if itemName != '' and itemPrice != '' and ui.businessCBox.currentIndex() in self.businessIds:
+			accessToken = ui.fullAccessEntry.text()
+			businessId = self.businessIds[ui.businessCBox.currentIndex()]['id']
+
+			try:
+				float(itemPrice)
+			except:
+				itemPrice = 0.0
+
+			itemDict = {
+				"name": itemName,
+				"description": itemDescription,
+				"unitPrice": itemPrice
+			}
+
+			response = waveClient.create_product(accessToken, businessId, accountId, itemDict)
+			if response['errors']:
+				print('Errors: ', response['errors'])
+			else:
+				print('Item added')
+				
+			self.get_items(ui)
+			self.newItemFrm.close()
+
 # verifica que el usuario este autorizado
 def check_licence(user='huzu'):
 	url = f'https://raw.githubusercontent.com/akkalame/paypal-auto-api/develop/licencias/{user}.txt'

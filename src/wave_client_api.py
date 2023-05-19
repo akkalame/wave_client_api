@@ -308,7 +308,8 @@ def create_product(accessToken, businessId, accountId, item):
 	variables = {
 		"input": {
 			"businessId": businessId,
-			"incomeAccountId": accountId 
+			"incomeAccountId": accountId,
+			
 		}
 	}
 
