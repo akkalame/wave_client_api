@@ -309,7 +309,7 @@ def create_product(accessToken, businessId, accountId, item):
 		"input": {
 			"businessId": businessId,
 			"incomeAccountId": accountId,
-			
+
 		}
 	}
 
@@ -542,7 +542,11 @@ def send_invoice(accessToken, invoiceId, to, subject, message='', attachPDF=Fals
 		if not errors:
 			data.append({'didSucceed': response['data']['invoiceSend']['didSucceed']})
 		
-		errors += response['data']['invoiceSend']['inputErrors']
+		try:
+			errors += response['data']['invoiceSend']['inputErrors']
+		except:
+			print('please send picture of this to developer\nsend_invoice',response)
+
 		return {
 			"data": data,
 			"errors": errors
