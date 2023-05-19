@@ -29,8 +29,12 @@ class Client():
 		ui.customerCBox.clear()
 
 		token = ui.fullAccessEntry.text()
-		businessId = self.businessIds[ui.businessCBox.currentIndex()]['id']
-		if token != '':
+		if ui.businessCBox.currentIndex() in self.businessIds:
+			businessId = self.businessIds[ui.businessCBox.currentIndex()]['id']
+		else:
+			businessId = None
+
+		if token != '' and businessId:
 			response = waveClient.list_customers(token, businessId)
 			if response['errors']:
 				pass
@@ -53,8 +57,12 @@ class Client():
 		ui.itemsTable.setRowCount(0)
 
 		token = ui.fullAccessEntry.text()
-		businessId = self.businessIds[ui.businessCBox.currentIndex()]['id']
-		if token != '':
+		if ui.businessCBox.currentIndex() in self.businessIds:
+			businessId = self.businessIds[ui.businessCBox.currentIndex()]['id']
+		else:
+			businessId = None
+
+		if token != '' and businessId:
 			response = waveClient.list_products(token, businessId)
 			if response['errors']:
 				pass
