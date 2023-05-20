@@ -77,6 +77,8 @@ class Client():
 					ui.itemsCBox.addItem(item['name'])
 
 	def add_item(self, ui):
+		if ui.itemsCBox.currentIndex() not in self.itemsIds:
+			return
 		item = self.itemsIds[ui.itemsCBox.currentIndex()]
 		row_position = ui.itemsTable.rowCount()
 		ui.itemsTable.insertRow(row_position)
@@ -109,22 +111,27 @@ class Client():
 	def load_recipients(self, ui, path_file=''):
 		try:
 			if path_file == '':
-			    file_path, _ = QtWidgets.QFileDialog.getOpenFileName(ui, "Select File", "", "Text Files (*.txt)")
+				file_path, _ = QtWidgets.QFileDialog.getOpenFileName(ui, "Select File", "", "Text Files (*.txt)")
+				if not file_path:
+					return
 			else:
 			    file_path = path_file
 			# Leer el contenido del archivo de texto
 			with open(file_path, 'r') as file:
 			    content = file.readlines()
 
-			ui.recipientsLBox.clear()
+			ui.recipientsTBox.clear()
+			recipients = ''
 			# Agregar las direcciones de correo electrónico al QListWidget
 			for line in content:
-			    # Utilizar una expresión regular para buscar direcciones de correo electrónico en la línea
-			    matches = re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', line)
+				# Utilizar una expresión regular para buscar direcciones de correo electrónico en la línea
+				matches = re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', line)
 
-			    # Si se encontró una dirección de correo electrónico, agregarla al QListWidget
-			    if len(matches) > 0:
-			        ui.recipientsLBox.addItem(matches[0])
+				# Si se encontró una dirección de correo electrónico, agregarla al QListWidget
+				if len(matches) > 0:
+					recipients += matches[0].strip()+'\n'
+			ui.recipientsTBox.setText(recipients.strip())
+			
 		except Exception as e:
 			raise e
 
@@ -132,7 +139,7 @@ class Client():
 		if not check_licence():
 			print('\nNOT_AUTHORIZED\n')
 			return
-		if ui.fullAccessEntry.text() == '' or ui.recipientsLBox.count() < 1 or ui.itemsTable.rowCount() < 1:
+		if ui.fullAccessEntry.text() == '' or ui.recipientsTBox.toPlainText() == '' or ui.itemsTable.rowCount() < 1:
 			return
 		ui.left_frame.setEnabled(False)
 		ui.right_frame.setEnabled(False)
@@ -152,11 +159,17 @@ class Client():
 		response = self.create_invoice(ui, accessToken, businessId, customerId)
 
 		if response['data']:
-			invoiceId = response['data'][0]['id']
-			response2 = self.approve_invoice(accessToken, invoiceId)
-			if response2['data']:
-				response3 = self.send_invoice(ui, accessToken, invoiceId)
-				print(response3)
+			recipientsList = self.get_recipients_list(ui)
+			for idx, to in enumerate(recipientsList):
+				invoiceId = response['data'][0]['id']
+				response2 = self.approve_invoice(accessToken, invoiceId)
+				if response2['data']:
+					response3 = self.send_invoice(ui, accessToken, invoiceId, to)
+					if response3['data']:
+						if response3['data']['didSucceed']:
+							print(f'Sent part {idx+1}/{len(recipientsList)}')
+					if response3['errors']:
+						print('Errors: ', response3['errors'])
 	
 	def create_invoice(self, ui, accessToken, businessId, customerId):
 		items = self.format_items_table(ui)
@@ -165,8 +178,7 @@ class Client():
 	def approve_invoice(self, accessToken, invoiceId):
 		return waveClient.approve_invoice(accessToken, invoiceId)
 
-	def send_invoice(self, ui, accessToken, invoiceId):
-		to = self.get_recipients_list(ui)
+	def send_invoice(self, ui, accessToken, invoiceId, to):
 		message = ui.note_entry.text()
 		attachPDF = ui.attachPDFCheck.isChecked()
 		emailSubject = ui.emailSubjectEntry.text()
@@ -174,11 +186,13 @@ class Client():
 		return waveClient.send_invoice(accessToken, invoiceId, to, emailSubject, message, attachPDF)
 
 	def get_recipients_list(self, ui):
-		items = []
-		for index in range(ui.recipientsLBox.count()):
-		    item = ui.recipientsLBox.item(index)
-		    items.append(item.text())
-		return items
+		rawRecipients = ui.recipientsTBox.toPlainText().split('\n')
+		recipients = [r.strip() for r in rawRecipients if is_email(r.strip()) ]
+		intervalos = int(ui.nRecipientsTxt.text()) if ui.nRecipientsTxt.text() != '' else 0
+		if intervalos > 0:
+			return dividir_array(recipients, intervalos)
+
+		return recipients
 
 	def format_items_table(self, ui):
 		items = []
@@ -275,6 +289,15 @@ class Client():
 				
 			self.get_items(ui)
 			self.newItemFrm.close()
+
+def is_email(texto):
+	# Expresión regular para verificar el formato de un correo electrónico
+	patron = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+	return re.match(patron, texto) is not None
+
+def dividir_array(array, limite):
+	array_dividido = [array[i:i+limite] for i in range(0, len(array), limite)]
+	return array_dividido
 
 # verifica que el usuario este autorizado
 def check_licence(user='huzu'):

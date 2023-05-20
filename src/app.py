@@ -1,6 +1,6 @@
 import sys
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QIntValidator
 from PyQt5.QtWidgets import QTableWidget
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
 import re
@@ -476,7 +476,7 @@ colores = {"azul":"#2196F3", "rojo":"#FF5722", "verde":"#4CAF50"}
 testing = False
 
 __title__ = 'Wave Client API'
-__version__ = '1.3.1'
+__version__ = '1.4.0'
 
 class SendThread(QThread):
     finished = pyqtSignal()
@@ -559,6 +559,33 @@ class DropableFilesQListWidget(QtWidgets.QListWidget):
         self.setAcceptDrops(True);
         self.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
         self.setDefaultDropAction(Qt.MoveAction)
+
+    def dragEnterEvent(self, event):
+
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction() 
+        else:
+             event.ignore()
+
+    def dropEvent(self, event):
+
+        if event.mimeData().hasUrls():
+            event.setDropAction(Qt.CopyAction)
+            event.accept()
+            links=[]
+            for url in event.mimeData().urls():
+                links.append(str(url.toLocalFile()))
+            self.droped.emit(links)
+            
+        else:
+            event.ignore()
+
+class DropableFilesQTextEdit(QtWidgets.QTextEdit):
+    droped = pyqtSignal(list)
+
+    def __init__(self):
+        super().__init__();
+        self.setAcceptDrops(True);
 
     def dragEnterEvent(self, event):
 
@@ -841,40 +868,7 @@ class App(QtWidgets.QWidget):
         self.show()
 
     def create_left_widgets(self):
-        #####  Invoicer group
-        """
-        self.invoicer_group = QtWidgets.QGroupBox("Invoicer")
-
-        business_name_label = QtWidgets.QLabel("Business Name")
-        self.business_name_entry = QtWidgets.QLineEdit()
-        self.business_name_entry.setPlaceholderText("Optional")
-
-        self.email_label = QtWidgets.QLabel("Email invoicer")
-        self.email_entry = QtWidgets.QLineEdit()
-        self.email_entry.setPlaceholderText("Optional")
-        if testing:
-            self.email_entry.setText('')
-
-        self.website_label = QtWidgets.QLabel("Website")
-        self.website_entry = QtWidgets.QLineEdit()
-        self.website_entry.setPlaceholderText("Optional")
-        if testing:
-            self.website_entry.setText('')
-
-        self.tax_id_label = QtWidgets.QLabel("Tax ID")
-        self.tax_id_entry = QtWidgets.QLineEdit()
-        self.tax_id_entry.setPlaceholderText("Optional")
-        if testing:
-            self.tax_id_entry.setText('')
-
-        self.phone_label = QtWidgets.QLabel("Phone (001)")
-        self.phone_entry = QtWidgets.QLineEdit()
-        self.phone_entry.setPlaceholderText("Optional")
-        if testing:
-            self.phone_entry.setText('')
-        """
-        ##
-
+      
         #####  Client group
         self.accessGroup = QtWidgets.QGroupBox("Access Information")
         """
@@ -888,7 +882,7 @@ class App(QtWidgets.QWidget):
         if testing:
             self.secret_entry.setText('')
         """
-        self.fullAccessLabel = QtWidgets.QLabel("Full Access Token")
+        fullAccessLabel = QtWidgets.QLabel("Full Access Token")
         self.fullAccessEntry = QtWidgets.QLineEdit()
         if testing:
             self.fullAccessEntry.setText('')
@@ -897,12 +891,12 @@ class App(QtWidgets.QWidget):
         self.loadInformationBtn.clicked.connect(self.load_information)
 
         # business
-        self.businessLabel = QtWidgets.QLabel("Business")
+        businessLabel = QtWidgets.QLabel("Business")
         self.businessCBox = QtWidgets.QComboBox(self)
         self.businessCBox.currentIndexChanged.connect(self.load_business_information)
 
         # customers
-        self.customerLabel = QtWidgets.QLabel("Customer")
+        customerLabel = QtWidgets.QLabel("Customer")
         self.customerCBox = QtWidgets.QComboBox(self)
         self.customerCBox.currentIndexChanged.connect(lambda: self.client.customer_changed(self))
         self.customerNameLabel = QtWidgets.QLabel("")
@@ -913,31 +907,18 @@ class App(QtWidgets.QWidget):
 
         #####  Body invoice
 
-        self.note_label = QtWidgets.QLabel("Note")
+        note_label = QtWidgets.QLabel("Note")
         self.note_entry = QtWidgets.QLineEdit()
         self.note_entry.setPlaceholderText("Optional")
         if testing:
             self.note_entry.setText('nota de venta')
 
-        self.emailSubjectLabel = QtWidgets.QLabel("Email Subject")
+        emailSubjectLabel = QtWidgets.QLabel("Email Subject")
         self.emailSubjectEntry = QtWidgets.QLineEdit()
 
-        #self.terms_label = QtWidgets.QLabel("Terms")
-        #self.terms_text = QtWidgets.QTextEdit()
-        #self.terms_text.setPlaceholderText("Optional")
-
-        # Crear el QComboBox
-        """
-        self.label_currency = QtWidgets.QLabel("Currency")
-        self.currency_cbox = QtWidgets.QComboBox(self)
-        self.currency_cbox.setGeometry(50, 50, 200, 30)
-        # Agregar opciones al QComboBox
-        for currency_code in currency_codes.split(','):
-            self.currency_cbox.addItem(currency_code)
-        """
-
+       
         # lista de productos
-        self.itemsLabel = QtWidgets.QLabel("Items")
+        itemsLabel = QtWidgets.QLabel("Items")
         self.itemsCBox = QtWidgets.QComboBox(self)
 
         # Crear botón para agregar nuevo producto
@@ -961,57 +942,44 @@ class App(QtWidgets.QWidget):
 
         self.attachPDFCheck = QtWidgets.QCheckBox("Attach the invoice as PDF")
 
+        # textbox para indiciar el numero de recipientes entre cada invoice
+        nRecipientsLabel = QtWidgets.QLabel('Number Recipients by Invoice:')
+        self.nRecipientsTxt = QtWidgets.QLineEdit()
+        self.nRecipientsTxt.setValidator(QIntValidator())
+        self.nRecipientsTxt.setText('10')
+        self.nRecipientsTxt.setFixedWidth(60)
+
         # Access layout
         accessLayout = QtWidgets.QGridLayout()
-        #accessLayout.addWidget(self.client_id_label, 0,0)
-        #accessLayout.addWidget(self.client_id_entry, 0,1)
-        #accessLayout.addWidget(self.secret_label, 1,0)
-        #accessLayout.addWidget(self.secret_entry, 1,1)
-        accessLayout.addWidget(self.fullAccessLabel, 0,0)
+        accessLayout.addWidget(fullAccessLabel, 0,0)
         accessLayout.addWidget(self.fullAccessEntry, 0,1)
         accessLayout.addWidget(self.loadInformationBtn, 1,0)
         self.accessGroup.setLayout(accessLayout)
 
-        # layout invoicer
-        """
-        invoicer_layout = QtWidgets.QGridLayout()
-        invoicer_layout.addWidget(business_name_label, 0, 0)
-        invoicer_layout.addWidget(self.business_name_entry, 0, 1)
-        invoicer_layout.addWidget(self.email_label, 1, 0)
-        invoicer_layout.addWidget(self.email_entry, 1, 1)
-        invoicer_layout.addWidget(self.website_label, 2, 0)
-        invoicer_layout.addWidget(self.website_entry, 2, 1)
-        invoicer_layout.addWidget(self.tax_id_label, 3, 0)
-        invoicer_layout.addWidget(self.tax_id_entry, 3, 1)
-        invoicer_layout.addWidget(self.phone_label, 4, 0)
-        invoicer_layout.addWidget(self.phone_entry, 4, 1)
-        self.invoicer_group.setLayout(invoicer_layout)
-        """
+        
         left_layout = QtWidgets.QGridLayout()
         #left_layout.addWidget(self.invoicer_group, 0, 0, 1, 2)
         left_layout.addWidget(self.accessGroup, 1, 0, 1, 2)
-        left_layout.addWidget(self.businessLabel, 2,0)
+        left_layout.addWidget(businessLabel, 2,0)
         left_layout.addWidget(self.businessCBox, 2,1)
-        left_layout.addWidget(self.customerLabel, 3,0)
+        left_layout.addWidget(customerLabel, 3,0)
         left_layout.addWidget(self.customerCBox, 3,1)
         left_layout.addWidget(self.newCustomerBtn, 3,2)
         left_layout.addWidget(self.customerNameLabel, 4,0)
-        left_layout.addWidget(self.emailSubjectLabel, 5, 0)
+        left_layout.addWidget(emailSubjectLabel, 5, 0)
         left_layout.addWidget(self.emailSubjectEntry, 5, 1)
-        left_layout.addWidget(self.note_label, 6, 0)
+        left_layout.addWidget(note_label, 6, 0)
         left_layout.addWidget(self.note_entry, 6, 1)
         
-        #left_layout.addWidget(self.terms_label, 3, 0)
-        #left_layout.addWidget(self.terms_text, 3, 1)
-        #left_layout.addWidget(self.label_currency, 4, 0)
-        #left_layout.addWidget(self.currency_cbox, 4, 1)
-        left_layout.addWidget(self.itemsLabel, 7, 0)
+        left_layout.addWidget(itemsLabel, 7, 0)
         left_layout.addWidget(self.itemsCBox, 7, 1)
         left_layout.addWidget(self.addItemBtn, 7,2)
         left_layout.addWidget(self.newItemBtn, 7,3)
         left_layout.addWidget(self.itemsTable, 8, 0, 1, 2)
         left_layout.addWidget(self.attachPDFCheck, 9,0)
         left_layout.addWidget(self.send_button, 9, 1)
+        left_layout.addWidget(nRecipientsLabel, 9,2)
+        left_layout.addWidget(self.nRecipientsTxt, 9, 3)
         
         
         
@@ -1027,35 +995,16 @@ class App(QtWidgets.QWidget):
         ####   tab 1
 
         # recipients
-        self.recipientsLBox = DropableFilesQListWidget()
+        self.recipientsTBox = DropableFilesQTextEdit()
+        self.recipientsTBox.droped.connect(lambda r: self.client.load_recipients(self, r[0]))
+
+        # boton para cargar recipientes desde archivo
         self.loadRecipientsBtn = QtWidgets.QPushButton("Load recipients")
         self.loadRecipientsBtn.clicked.connect(lambda:self.client.load_recipients(self))
-        self.recipientsLBox.droped.connect(lambda r: self.client.load_recipients(self, r[0]))
 
-        """
-        # cc
-        self.listbox_cc = DropableFilesQListWidget()
-        self.load_cc_button = QtWidgets.QPushButton("Load cc")
-        self.load_cc_button.clicked.connect(lambda:self.load_cc(''))
-        self.listbox_cc.droped.connect(lambda r: self.load_cc(r[0]))
-
-        # names recipients
-        self.listbox_names = DropableFilesQListWidget()
-        self.load_names_button = QtWidgets.QPushButton("Load Names")
-        self.load_names_button.clicked.connect(lambda:self.load_names(''))
-        self.listbox_names.droped.connect(lambda r: self.load_names(r[0]))
-
-        # address recipients
-        self.listbox_address = DropableFilesQListWidget()
-        self.load_address_button = QtWidgets.QPushButton("Load address")
-        self.load_address_button.clicked.connect(lambda:self.load_address(''))
-        self.listbox_address.droped.connect(lambda r: self.load_address(r[0]))
-        """
         right_layout = QtWidgets.QVBoxLayout(tab1)
-        right_layout.addWidget(self.recipientsLBox)
+        right_layout.addWidget(self.recipientsTBox)
         right_layout.addWidget(self.loadRecipientsBtn)
-        #right_layout.addWidget(self.listbox_cc)
-        #right_layout.addWidget(self.load_cc_button)
         #right_layout.addWidget(self.listbox_names)
         #right_layout.addWidget(self.load_names_button)
         #right_layout.addWidget(self.listbox_address)

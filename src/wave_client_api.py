@@ -545,7 +545,7 @@ def send_invoice(accessToken, invoiceId, to, subject, message='', attachPDF=Fals
 		try:
 			errors += response['data']['invoiceSend']['inputErrors']
 		except:
-			print('please send picture of this to developer\nsend_invoice',response)
+			pass#print('please send picture of this to developer\nsend_invoice',response)
 
 		return {
 			"data": data,

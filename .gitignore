@@ -6,3 +6,5 @@ src/dist
 *.zip
 test.py
 test_access.test
+to.txt
+__pycache__
