@@ -476,7 +476,7 @@ colores = {"azul":"#2196F3", "rojo":"#FF5722", "verde":"#4CAF50"}
 testing = False
 
 __title__ = 'Wave Client API'
-__version__ = '1.4.0'
+__version__ = '1.5.0'
 
 class SendThread(QThread):
     finished = pyqtSignal()
@@ -492,64 +492,22 @@ class SendThread(QThread):
 
     def send(self):
         self.client.process_invoice(self.mainApp)
-
+        print('The script "Send Invoices" is finished')
 class SendReminderThread(QThread):
     finished = pyqtSignal()
 
-    def __init__(self, parent):
+    def __init__(self, parent, client):
         super().__init__()
         self.mainApp = parent
+        self.client = client
 
     def run(self):
         self.send()
         self.finished.emit()
 
     def send(self):
-        print('creando invoice object')
-        self.mainApp.label_information.setText("Starting")
-        invoices = Invoices()
-
-        print('obteniendo bearer token')
-        self.mainApp.label_information.setText("Getting token")
-        response = invoices.get_bearer_token(self.mainApp.client_id_entry.text(), self.mainApp.secret_entry.text())
-        if response:
-            print(response)
-            return
-        print('getting invoices')
-        page = 1
-        self.mainApp.label_information.setText(f"Getting list of invoices, Page {page}")
-        list_invoices = invoices.list_invoices(page=page)
-        with open('test.json', 'w') as f:
-            f.write(json.dumps(list_invoices))
-        
-        status_can_reminder = ['UNPAID', 'SENT', 'PARTIALLY_PAID']
-        while list_invoices != {}:
-            total_invoices = len(list_invoices['items'])
-
-            if total_invoices > self.mainApp.listbox_cc.count() and self.mainApp.listbox_cc.count() > 0:
-                restante = total_invoices - self.mainApp.listbox_cc.count()
-                for i in range(restante):
-                    self.mainApp.listbox_cc.addItem(self.mainApp.listbox_cc.item(i).text())
-
-            for idx, item in enumerate(list_invoices['items']):
-                if not item['status'] in status_can_reminder:
-                    print('not in status')
-                    continue
-                cc = (self.mainApp.listbox_cc.item(idx).text().strip().split(',')
-                        if self.mainApp.listbox_cc.count() > 0 else [])
-                self.mainApp.label_information.setText(f"Sending reminder {idx+1}/{total_invoices}. Page {page}")
-                
-                response = invoices.send_reminder(id_invoice=item['id'], 
-                        subject=self.mainApp.subject_reminder.text(), 
-                        note=self.mainApp.note_reminder.toPlainText(),
-                        cc=cc)
-
-            page += 1
-            self.mainApp.label_information.setText(f"Getting list of invoices, Page {page}")
-            list_invoices = invoices.list_invoices(page=page)
-        
-        self.mainApp.label_information.setText('The script "Send reminder" is finished')
-        print('The script "Send reminder" is finished')
+        self.client.process_reminders(self.mainApp)
+        print('The script "Send Reminder" is finished')
 
 class DropableFilesQListWidget(QtWidgets.QListWidget):
     droped = pyqtSignal(list)
@@ -907,11 +865,9 @@ class App(QtWidgets.QWidget):
 
         #####  Body invoice
 
-        note_label = QtWidgets.QLabel("Note")
-        self.note_entry = QtWidgets.QLineEdit()
+        note_label = QtWidgets.QLabel("Message")
+        self.note_entry = QtWidgets.QTextEdit()
         self.note_entry.setPlaceholderText("Optional")
-        if testing:
-            self.note_entry.setText('nota de venta')
 
         emailSubjectLabel = QtWidgets.QLabel("Email Subject")
         self.emailSubjectEntry = QtWidgets.QLineEdit()
@@ -943,11 +899,16 @@ class App(QtWidgets.QWidget):
         self.attachPDFCheck = QtWidgets.QCheckBox("Attach the invoice as PDF")
 
         # textbox para indiciar el numero de recipientes entre cada invoice
-        nRecipientsLabel = QtWidgets.QLabel('Number Recipients by Invoice:')
+        nRecipientsLabel = QtWidgets.QLabel('Recipients by Invoice:')
         self.nRecipientsTxt = QtWidgets.QLineEdit()
         self.nRecipientsTxt.setValidator(QIntValidator())
         self.nRecipientsTxt.setText('10')
         self.nRecipientsTxt.setFixedWidth(60)
+
+        # Reminder Button
+        sendReminderBtn = QtWidgets.QPushButton("Send Reminder")
+        sendReminderBtn.clicked.connect(lambda: self.client.start_send_reminders(self, 
+            SendReminderThread(self, self.client)))
 
         # Access layout
         accessLayout = QtWidgets.QGridLayout()
@@ -980,6 +941,7 @@ class App(QtWidgets.QWidget):
         left_layout.addWidget(self.send_button, 9, 1)
         left_layout.addWidget(nRecipientsLabel, 9,2)
         left_layout.addWidget(self.nRecipientsTxt, 9, 3)
+        left_layout.addWidget(sendReminderBtn, 10,0)
         
         
         
@@ -1127,18 +1089,6 @@ class App(QtWidgets.QWidget):
                 self.listbox_address.addItem(line)
         except:
             pass
-    
-    def send_reminder(self):
-        if not check_licence():
-            return
-        if self.client_id_entry.text() == '' or self.secret_entry.text() == '':
-            return
-
-        self.left_frame.setEnabled(False)
-        self.right_frame.setEnabled(False)
-        self.send_thread = SendReminderThread(self)
-        self.send_thread.start()
-        self.send_thread.finished.connect(self.on_send_thread_finished)
 
 if __name__ == '__main__':
     try:

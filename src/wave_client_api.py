@@ -555,6 +555,149 @@ def send_invoice(accessToken, invoiceId, to, subject, message='', attachPDF=Fals
 	except Exception as e:
 		raise e
 
+def list_invoices(accessToken, businessId):
+	query = """
+    query($businessId: ID!, $page: Int!, $pageSize: Int!) {
+		  business(id: $businessId) {
+		    id
+		    invoices(page: $page, pageSize: $pageSize) {
+		      pageInfo {
+		        currentPage
+		        totalPages
+		        totalCount
+		      }
+		      edges {
+		        node {
+		          id
+		          createdAt
+		          modifiedAt
+		          pdfUrl
+		          viewUrl
+		          status
+		          title
+		          subhead
+		          invoiceNumber
+		          invoiceDate
+		          poNumber
+		          customer {
+		            id
+		            name
+		            # Can add additional customer fields here
+		          }
+		          currency {
+		            code
+		          }
+		          dueDate
+		          amountDue {
+		            value
+		            currency {
+		              symbol
+		            }
+		          }
+		          amountPaid {
+		            value
+		            currency {
+		              symbol
+		            }
+		          }
+		          taxTotal {
+		            value
+		            currency {
+		              symbol
+		            }
+		          }
+		          total {
+		            value
+		            currency {
+		              symbol
+		            }
+		          }
+		          exchangeRate
+		          footer
+		          memo
+		          disableCreditCardPayments
+		          disableBankPayments
+		          itemTitle
+		          unitTitle
+		          priceTitle
+		          amountTitle
+		          hideName
+		          hideDescription
+		          hideUnit
+		          hidePrice
+		          hideAmount
+		          items {
+		            product {
+		              id
+		              name
+		              # Can add additional product fields here
+		            }
+		            description
+		            quantity
+		            price
+		            subtotal {
+		              value
+		              currency {
+		                symbol
+		              }
+		            }
+		            total {
+		              value
+		              currency {
+		                symbol
+		              }
+		            }
+		            account {
+		              id
+		              name
+		              subtype {
+		                name
+		                value
+		              }
+		              # Can add additional account fields here
+		            }
+		            taxes {
+		              amount {
+		                value
+		              }
+		              salesTax {
+		                id
+		                name
+		                # Can add additional sales tax fields here
+		              }
+		            }
+		          }
+		          lastSentAt
+		          lastSentVia
+		          lastViewedAt
+		        }
+		      }
+		    }
+		  }
+		}
+  """
+	
+	variables	= {
+  	"businessId": businessId,
+  	"page": 1,
+  	"pageSize": 20
+	} 
+	response = response = exceute_request(accessToken, query, variables)
+	try:
+		errors = get_errors(response)
+		data = []
+		if not errors:
+			for edge in response['data']['business']['invoices']['edges']:
+				data.append(edge['node'])
+
+		return {
+			"data": data,
+			"errors": errors
+		}
+			
+	except Exception as e:
+		raise e
+
 def get_errors(response):
 	if "errors" in response:
 		errors = []

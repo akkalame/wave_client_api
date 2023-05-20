@@ -151,6 +151,20 @@ class Client():
 		ui.left_frame.setEnabled(True)
 		ui.right_frame.setEnabled(True)
 
+	def create_invoice(self, ui, accessToken, businessId, customerId):
+		items = self.format_items_table(ui)
+		return waveClient.create_invoice(accessToken, businessId, customerId, items)
+
+	def approve_invoice(self, accessToken, invoiceId):
+		return waveClient.approve_invoice(accessToken, invoiceId)
+
+	def send_invoice(self, ui, accessToken, invoiceId, to):
+		message = ui.note_entry.toPlainText()
+		attachPDF = ui.attachPDFCheck.isChecked()
+		emailSubject = ui.emailSubjectEntry.text()
+
+		return waveClient.send_invoice(accessToken, invoiceId, to, emailSubject, message, attachPDF)
+
 	def process_invoice(self, ui):
 		accessToken = ui.fullAccessEntry.text()
 		businessId = self.businessIds[ui.businessCBox.currentIndex()]['id']
@@ -171,20 +185,69 @@ class Client():
 					if response3['errors']:
 						print('Errors: ', response3['errors'])
 	
-	def create_invoice(self, ui, accessToken, businessId, customerId):
-		items = self.format_items_table(ui)
-		return waveClient.create_invoice(accessToken, businessId, customerId, items)
+	def start_send_reminders(self, ui, sendThread):
+		print('starting reminder')
+		if not check_licence():
+			print('\nNOT_AUTHORIZED\n')
+			return
+		if ui.fullAccessEntry.text() == '' or ui.recipientsTBox.toPlainText() == '':
+			return
+		ui.left_frame.setEnabled(False)
+		ui.right_frame.setEnabled(False)
+		self.sendThread = sendThread
+		self.sendThread.start()
+		self.sendThread.finished.connect(lambda: self.on_send_thread_finished(ui))
 
-	def approve_invoice(self, accessToken, invoiceId):
-		return waveClient.approve_invoice(accessToken, invoiceId)
+	def process_reminders(self, ui):
+		accessToken = ui.fullAccessEntry.text()
+		if ui.businessCBox.currentIndex() in self.businessIds:
+			businessId = self.businessIds[ui.businessCBox.currentIndex()]['id']
+		else:
+			businessId = None
 
-	def send_invoice(self, ui, accessToken, invoiceId, to):
-		message = ui.note_entry.text()
-		attachPDF = ui.attachPDFCheck.isChecked()
+		response = waveClient.list_invoices(accessToken, businessId)
+		if response['data']:
+			invoicesId = [r['id'] for r in response['data'] 
+							if r['status'] != 'DRAFT' and r['status'] != 'CANCEL']
+			recipientsList = self.get_recipients_list(ui)
+			idxInvoice = 0
+			for idx, to in enumerate(recipientsList):
+				invoiceId = invoicesId[idxInvoice]
+				response2 = self.send_reminder(ui, accessToken, invoiceId, to)
+				
+				if response2['data']:
+					if 'didSucceed' in response2['data']:
+						if response2['data']['didSucceed']:
+							print(f'Reminder Sent part {idx+1}/{len(recipientsList)}')
+						else:
+							print('Fail to send reminder')
+					print(response2['data'])
+				if response2['errors']:
+					print('Errors: ', response2['errors'])
+
+				idxInvoice = idxInvoice +1 if idxInvoice < len(invoicesId)-1 else 0
+	
+	def send_reminder(self, ui, accessToken, invoiceId, to):
+		message = ui.note_entry.toPlainText()
 		emailSubject = ui.emailSubjectEntry.text()
 
-		return waveClient.send_invoice(accessToken, invoiceId, to, emailSubject, message, attachPDF)
+		return waveClient.send_invoice(accessToken, invoiceId, to, emailSubject, message)
 
+	def get_invoices(self, ui):
+
+		token = ui.fullAccessEntry.text()
+		if ui.businessCBox.currentIndex() in self.businessIds:
+			businessId = self.businessIds[ui.businessCBox.currentIndex()]['id']
+		else:
+			businessId = None
+
+		if token != '' and businessId:
+			response = waveClient.list_invoices(token, businessId)
+			if response['errors']:
+				print('Errors: ', response['errors'])
+			else:
+				return response(response['data'])
+						
 	def get_recipients_list(self, ui):
 		rawRecipients = ui.recipientsTBox.toPlainText().split('\n')
 		recipients = [r.strip() for r in rawRecipients if is_email(r.strip()) ]
