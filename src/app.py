@@ -476,7 +476,7 @@ colores = {"azul":"#2196F3", "rojo":"#FF5722", "verde":"#4CAF50"}
 testing = False
 
 __title__ = 'Wave Client API'
-__version__ = '1.5.0'
+__version__ = '1.5.1'
 
 class SendThread(QThread):
     finished = pyqtSignal()

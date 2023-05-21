@@ -180,13 +180,17 @@ class Client():
 				if response2['data']:
 					response3 = self.send_invoice(ui, accessToken, invoiceId, to)
 					if response3['data']:
-						if response3['data']['didSucceed']:
-							print(f'Sent part {idx+1}/{len(recipientsList)}')
+						if 'didSucceed' in response3['data']:
+							if response3['data']['didSucceed']:
+								print(f'Sent part {idx+1}/{len(recipientsList)}')
+							else:
+								print('Fail to send reminder')
+						else:
+							print(response2['data'])
 					if response3['errors']:
 						print('Errors: ', response3['errors'])
 	
 	def start_send_reminders(self, ui, sendThread):
-		print('starting reminder')
 		if not check_licence():
 			print('\nNOT_AUTHORIZED\n')
 			return
@@ -221,7 +225,8 @@ class Client():
 							print(f'Reminder Sent part {idx+1}/{len(recipientsList)}')
 						else:
 							print('Fail to send reminder')
-					print(response2['data'])
+					else:
+						print(response2['data'])
 				if response2['errors']:
 					print('Errors: ', response2['errors'])
 
