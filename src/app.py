@@ -476,7 +476,7 @@ colores = {"azul":"#2196F3", "rojo":"#FF5722", "verde":"#4CAF50"}
 testing = False
 
 __title__ = 'Wave Client API'
-__version__ = '1.5.1'
+__version__ = '1.6.0'
 
 class SendThread(QThread):
     finished = pyqtSignal()
@@ -493,6 +493,7 @@ class SendThread(QThread):
     def send(self):
         self.client.process_invoice(self.mainApp)
         print('The script "Send Invoices" is finished')
+
 class SendReminderThread(QThread):
     finished = pyqtSignal()
 
@@ -788,6 +789,173 @@ class NewItemForm(QtWidgets.QWidget):
         for d in data:
             self.combo_account.addItem(d['name'], d['id'])
 
+class AddMultiCusItemForm(QtWidgets.QWidget):
+    create = pyqtSignal()
+
+    def __init__(self,parent):
+        super().__init__()
+        self.setWindowTitle("Add Multiple Customer and Items")
+        with open('src/estilos.css', mode='r') as f:
+            estilos = f.read()
+        self.setStyleSheet(estilos)
+        self.parent = parent
+
+        self.init_ui()
+    
+    def init_ui(self):
+        layout = QtWidgets.QVBoxLayout()
+        # Crear el widget principal de pestañas
+        tabWidget = QtWidgets.QTabWidget()
+        layout.addWidget(tabWidget)
+
+        # Crear las pestañas
+        tab1 = self.tab1_ui()
+        tab2 = self.tab2_ui()
+        tab3 = self.tab3_ui()
+
+        # Agregar las pestañas al widget principal de pestañas
+        tabWidget.addTab(tab1, "Tokens")
+        tabWidget.addTab(tab2, "Customer")
+        tabWidget.addTab(tab3, "Item")
+
+        sendBtn = QtWidgets.QPushButton('Create')
+        sendBtn.clicked.connect(lambda: self.create.emit())
+        layout.addWidget(sendBtn)
+
+        self.setLayout(layout)
+
+    def tab1_ui(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        label = QtWidgets.QLabel("Full Access Tokens")
+        self.tokensTBox = QtWidgets.QTextEdit()
+
+        self.personalBusinessCBox = QtWidgets.QCheckBox("Use personal business")
+
+        layout.addWidget(self.personalBusinessCBox)
+        layout.addWidget(label)
+        layout.addWidget(self.tokensTBox)
+
+        return tab
+
+    def tab2_ui(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        #      Informacion basica del customer
+        # Campos de texto
+        label_name = QtWidgets.QLabel('Name:')
+        self.customerName = QtWidgets.QLineEdit()
+
+        label_firstName = QtWidgets.QLabel('First Name:')
+        self.text_firstName = QtWidgets.QLineEdit()
+
+        label_lastName = QtWidgets.QLabel('Last Name:')
+        self.text_lastName = QtWidgets.QLineEdit()
+
+        label_email = QtWidgets.QLabel('Email:')
+        self.text_email = QtWidgets.QLineEdit()
+
+        label_phone = QtWidgets.QLabel('Phone:')
+        self.text_phone = QtWidgets.QLineEdit()
+
+        layout.addWidget(label_name)
+        layout.addWidget(self.customerName)
+        layout.addWidget(label_firstName)
+        layout.addWidget(self.text_firstName)
+        layout.addWidget(label_lastName)
+        layout.addWidget(self.text_lastName)
+        layout.addWidget(label_email)
+        layout.addWidget(self.text_email)
+        layout.addWidget(label_phone)
+        layout.addWidget(self.text_phone)
+
+        #        direccion de facturacion
+        # Campos de texto
+        label_city = QtWidgets.QLabel('City:')
+        self.text_city = QtWidgets.QLineEdit()
+
+        label_provinceCode = QtWidgets.QLabel('Province / State:')
+        self.combo_provinceCode = QtWidgets.QComboBox()
+
+        label_postalCode = QtWidgets.QLabel('ZIP Code:')
+        self.text_postalCode = QtWidgets.QLineEdit()
+
+        # Combo box para seleccionar país
+        label_countryCode = QtWidgets.QLabel('Country:')
+        self.combo_countryCode = QtWidgets.QComboBox()
+        self.combo_countryCode.currentIndexChanged.connect(self.load_state_code)
+        for name, code in countries:
+            self.combo_countryCode.addItem(name, code)
+
+        # Combo box para seleccionar moneda
+        label_currency = QtWidgets.QLabel('Currency:')
+        self.combo_currency = QtWidgets.QComboBox()
+        for name, code in currencies:
+            self.combo_currency.addItem(name, code)
+
+        layout.addWidget(label_currency)
+        layout.addWidget(self.combo_currency)
+        layout.addWidget(label_countryCode)
+        layout.addWidget(self.combo_countryCode)
+        layout.addWidget(label_provinceCode)
+        layout.addWidget(self.combo_provinceCode)
+        layout.addWidget(label_city)
+        layout.addWidget(self.text_city)
+        layout.addWidget(label_postalCode)
+        layout.addWidget(self.text_postalCode)
+        
+
+        return tab
+
+    def tab3_ui(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        # Campos de texto
+        label_name = QtWidgets.QLabel('Name:')
+        self.itemName = QtWidgets.QLineEdit()
+
+        label_description = QtWidgets.QLabel('Description:')
+        self.text_description = QtWidgets.QLineEdit()
+
+        label_unitPrice = QtWidgets.QLabel('Unit Price:')
+        self.text_unitPrice = QtWidgets.QLineEdit()
+
+        layout.addWidget(label_name)
+        layout.addWidget(self.itemName)
+        layout.addWidget(label_description)
+        layout.addWidget(self.text_description)
+        layout.addWidget(label_unitPrice)
+        layout.addWidget(self.text_unitPrice)
+        
+
+        return tab
+
+
+    def load_state_code(self):
+        self.combo_provinceCode.clear()
+        provincesList = provinces[self.combo_countryCode.currentData()]
+        for name, code in provincesList:
+            self.combo_provinceCode.addItem(name, code)
+
+class CreateMultiCusItemThread(QThread):
+    finished = pyqtSignal()
+
+    def __init__(self, parent, client):
+        super().__init__()
+        self.mainApp = parent
+        self.client = client
+
+    def run(self):
+        self.send()
+        self.finished.emit()
+
+    def send(self):
+        self.client.process_multi_item_cus(self.mainApp)
+        print('The script "Create Multiple Customer and Items" is finished')
+
 class App(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
@@ -847,6 +1015,10 @@ class App(QtWidgets.QWidget):
 
         self.loadInformationBtn = QtWidgets.QPushButton('Load Information')
         self.loadInformationBtn.clicked.connect(self.load_information)
+
+        # add multiple customers and items 
+        addMultiCusIteBtn = QtWidgets.QPushButton('Add multi customers and items')
+        addMultiCusIteBtn.clicked.connect(self.add_multi_customer_item)
 
         # business
         businessLabel = QtWidgets.QLabel("Business")
@@ -920,7 +1092,8 @@ class App(QtWidgets.QWidget):
         
         left_layout = QtWidgets.QGridLayout()
         #left_layout.addWidget(self.invoicer_group, 0, 0, 1, 2)
-        left_layout.addWidget(self.accessGroup, 1, 0, 1, 2)
+        left_layout.addWidget(self.accessGroup, 0, 0, 1, 2)
+        left_layout.addWidget(addMultiCusIteBtn, 1,0)
         left_layout.addWidget(businessLabel, 2,0)
         left_layout.addWidget(self.businessCBox, 2,1)
         left_layout.addWidget(customerLabel, 3,0)
@@ -1015,89 +1188,16 @@ class App(QtWidgets.QWidget):
         newItemFrm = NewItemForm(self, self.client)
         self.client.new_item(self, newItemFrm) 
 
-    # en caso de que la cantidad de recipientes sea mayor al nro de names, address o cc
-    # entonces se igualan en numero
-    def igualar_names_address(self):
-        if self.listbox.count() > self.listbox_names.count() and self.listbox_names.count() > 0:
-            restante = self.listbox.count() - self.listbox_names.count()
-            for i in range(restante):
-                self.listbox_names.addItem(self.listbox_names.item(i).text())
-
-        if self.listbox.count() > self.listbox_address.count() and self.listbox_address.count() > 0:
-            restante = self.listbox.count() - self.listbox_address.count()
-            for i in range(restante):
-                self.listbox_address.addItem(self.listbox_address.item(i).text())
-
-        if self.listbox.count() > self.listbox_cc.count() and self.listbox_cc.count() > 0:
-            restante = self.listbox.count() - self.listbox_cc.count()
-            for i in range(restante):
-                self.listbox_cc.addItem(self.listbox_cc.item(i).text())
-
-    def load_cc(self, path_file=''):
-        try:
-            if path_file == '':
-                file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Select File", "", "Text Files (*.txt)")
-            else:
-                file_path = path_file
-            # Leer el contenido del archivo de texto
-            with open(file_path, 'r') as file:
-                content = file.readlines()
-
-            self.listbox_cc.clear()
-            # Agregar las direcciones de correo electrónico al QListWidget
-            for line in content:
-                # Utilizar una expresión regular para buscar direcciones de correo electrónico en la línea
-                #matches = re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', line)
-
-                # Si se encontró una dirección de correo electrónico, agregarla al QListWidget
-                #if len(matches) > 0:
-                self.listbox_cc.addItem(line)
-        except Exception as e:
-            pass
-        #self.igualar_names_address()
-
-    def load_names(self, path_file=''):
-        try:
-            if path_file == '':
-                file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Select File", "", "Text Files (*.txt)")
-            else:
-                file_path = path_file
-            # Leer el contenido del archivo de texto
-            with open(file_path, 'r') as file:
-                content = file.readlines()
-            
-            self.listbox_names.clear()
-            # Agregar las direcciones de correo electrónico al QListWidget
-            for line in content:
-                self.listbox_names.addItem(line)
-        except:
-            pass
-    
-    def load_address(self, path_file=''):
-        try:
-            if path_file == '':
-                file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Select File", "", "Text Files (*.txt)")
-            else:
-                file_path = path_file
-
-            # Leer el contenido del archivo de texto
-            with open(file_path, 'r') as file:
-                content = file.readlines()
-            self.listbox_address.clear()
-            # Agregar las direcciones de correo electrónico al QListWidget
-            for line in content:
-                self.listbox_address.addItem(line)
-        except:
-            pass
+    def add_multi_customer_item(self):
+        newAddMultiCusItemForm = AddMultiCusItemForm(self)
+        self.client.new_multi_cus_item(self, newAddMultiCusItemForm, CreateMultiCusItemThread(self, self.client))
 
 if __name__ == '__main__':
     try:
-        print('iniciando QApplication')
+        print('Preparing Application')
         app = QtWidgets.QApplication(sys.argv)
-        print('instanciando app')
+        print('App is Woking up')
         window = App()
-        #print('mostrando app')
-        #window.show()
         
     except Exception as e:
         with open('error.log', 'a') as f:

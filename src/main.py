@@ -358,6 +358,119 @@ class Client():
 			self.get_items(ui)
 			self.newItemFrm.close()
 
+	def new_multi_cus_item(self, ui, form, createThread):
+		self.newMultiCusItemFrm = form
+		self.newMultiCusItemFrm.create.connect(lambda: self.start_create_multi_cus_item(ui, createThread))
+		self.newMultiCusItemFrm.show()
+
+	def start_create_multi_cus_item(self, ui, thread):
+		self.createMultiCusItemThread = thread
+		self.createMultiCusItemThread.start()
+
+	def process_multi_item_cus(self, ui):
+		if not self.validate_multi_cus_item():
+			print('You need to fill all Name\'s fields')
+			return
+
+		tokens = [r.strip() for r in 
+				self.newMultiCusItemFrm.tokensTBox.toPlainText().strip().split('\n')]
+
+		if len(tokens) > 0:
+			for token in tokens:
+				print('\nGetting business of token',token)
+				response = waveClient.get_businesses(token)
+				if response['errors']:
+					print('Error getting business\nError:',response['errors'])
+				else:
+					# selecting the business
+					businessId = ''
+					for idx, business in enumerate(response['data']):
+						# set a first business as default
+						if (self.newMultiCusItemFrm.personalBusinessCBox.isChecked() 
+							and business['isPersonal']):
+							businessId = business['id']
+							break
+						else:
+							businessId = business['id']
+							break
+
+					# creating new customer
+					print('Creating new customer')
+
+					countryCode = self.newMultiCusItemFrm.combo_countryCode.currentData()
+					provinceCode = (countryCode+'-'+
+							self.newMultiCusItemFrm.combo_provinceCode.currentData())
+					customerDict = {
+						"name": self.newMultiCusItemFrm.customerName.text(),
+					    "firstName": self.newMultiCusItemFrm.text_firstName.text(),
+					    "lastName": self.newMultiCusItemFrm.text_lastName.text(),
+					    "email": self.newMultiCusItemFrm.text_email.text(),
+					    "phone": self.newMultiCusItemFrm.text_phone.text(),
+					    "address": {
+					      "city": self.newMultiCusItemFrm.text_city.text(),
+					      "postalCode": self.newMultiCusItemFrm.text_postalCode.text(),
+					      "provinceCode": provinceCode,
+					      "countryCode": countryCode
+					    },
+					    "currency": self.newMultiCusItemFrm.combo_currency.currentData()
+					}
+
+					customerResponse = waveClient.create_customer(token, businessId, customerDict)
+					if customerResponse['errors']:
+						print('Error Making customer to token',token)
+						print('Errors: ', customerResponse['errors'])
+					else:
+						print('Customer added')
+
+					# getting the account id
+					accountsResponse = waveClient.get_accounts(token, businessId)
+					accountId = ''
+					if accountsResponse['errors']:
+						print('Error Getting account')
+						print('Errors: ', accountsResponse['errors'])
+					else:
+						for account in accountsResponse['data']:
+							accountId = account['id']
+							if account['subtype']['value'] == 'INCOME':
+								break
+
+					if not accountId:
+						print('Not have account available to items in token',token)
+						continue
+
+					# creating new item
+					itemName = self.newMultiCusItemFrm.itemName.text() 
+					itemDescription = self.newMultiCusItemFrm.text_description.text()
+					itemPrice = self.newMultiCusItemFrm.text_unitPrice.text()
+					#accountId = self.newMultiCusItemFrm.combo_account.currentData()
+
+					try:
+						float(itemPrice)
+					except:
+						itemPrice = 0.0
+
+					itemDict = {
+						"name": itemName,
+						"description": itemDescription,
+							"unitPrice": itemPrice
+						}
+
+					itemResponse = waveClient.create_product(token, businessId, accountId, itemDict)
+					if itemResponse['errors']:
+						print('Errors: ', itemResponse['errors'])
+					else:
+						print('Item added')
+
+
+	def validate_multi_cus_item(self):
+		if self.newMultiCusItemFrm.customerName.text() == '':
+			return False
+
+		if self.newMultiCusItemFrm.itemName.text() == '':
+			return False
+
+		return True
+
 def is_email(texto):
 	# Expresión regular para verificar el formato de un correo electrónico
 	patron = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
