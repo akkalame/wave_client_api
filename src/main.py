@@ -151,9 +151,9 @@ class Client():
 		ui.left_frame.setEnabled(True)
 		ui.right_frame.setEnabled(True)
 
-	def create_invoice(self, ui, accessToken, businessId, customerId):
+	def create_invoice(self, ui, accessToken, businessId, customerId, footer):
 		items = self.format_items_table(ui)
-		return waveClient.create_invoice(accessToken, businessId, customerId, items)
+		return waveClient.create_invoice(accessToken, businessId, customerId, items, footer)
 
 	def approve_invoice(self, accessToken, invoiceId):
 		return waveClient.approve_invoice(accessToken, invoiceId)
@@ -169,26 +169,33 @@ class Client():
 		accessToken = ui.fullAccessEntry.text()
 		businessId = self.businessIds[ui.businessCBox.currentIndex()]['id']
 		customerId = self.customersIds[ui.customerCBox.currentIndex()]['id']
+		footer = ui.footerEntry.text()
 
-		response = self.create_invoice(ui, accessToken, businessId, customerId)
+		response = self.create_invoice(ui, accessToken, businessId, customerId, footer)
 
 		if response['data']:
 			recipientsList = self.get_recipients_list(ui)
 			for idx, to in enumerate(recipientsList):
-				invoiceId = response['data'][0]['id']
-				response2 = self.approve_invoice(accessToken, invoiceId)
-				if response2['data']:
-					response3 = self.send_invoice(ui, accessToken, invoiceId, to)
-					if response3['data']:
-						if 'didSucceed' in response3['data']:
-							if response3['data']['didSucceed']:
-								print(f'Sent part {idx+1}/{len(recipientsList)}')
-							else:
-								print('Fail to send reminder')
-						else:
-							print(response2['data'])
-					if response3['errors']:
-						print('Errors: ', response3['errors'])
+				if response['data']:
+					if response['data'][0]:
+						invoiceId = response['data'][0]['id']
+						response2 = self.approve_invoice(accessToken, invoiceId)
+						if response2['data']:
+							response3 = self.send_invoice(ui, accessToken, invoiceId, to)
+							if response3['data']:
+								if 'didSucceed' in response3['data']:
+									if response3['data']['didSucceed']:
+										print(f'Sent part {idx+1}/{len(recipientsList)}')
+									else:
+										print('Fail to send reminder')
+								else:
+									print(response2['data'])
+							if response3['errors']:
+								print('Errors: ', response3['errors'])
+					else:
+						print('Invalid inputs, try to set less words')
+				if response['errors']:
+					print('Errors: ', response['errors'])
 	
 	def start_send_reminders(self, ui, sendThread):
 		if not check_licence():

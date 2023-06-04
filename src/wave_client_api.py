@@ -340,7 +340,7 @@ def refresh_token(clientId, clientSecret, previousToken):
 	print(data)
 	return requests.request("POST", scopeToken, headers=headers, data=data).text
 
-def create_invoice(accessToken, businessId, customerId, itemsList):
+def create_invoice(accessToken, businessId, customerId, itemsList, footer):
 	query = """
 		mutation ($input: InvoiceCreateInput!) {
 		  invoiceCreate(input: $input) {
@@ -458,7 +458,9 @@ def create_invoice(accessToken, businessId, customerId, itemsList):
 	  "input": {
 	    "businessId": businessId,
 	    "customerId": customerId,
-	    "items": itemsList
+	    "items": itemsList,
+	    "footer": footer,
+	    
 	  }
 	}
 

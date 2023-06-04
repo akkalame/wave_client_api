@@ -476,7 +476,7 @@ colores = {"azul":"#2196F3", "rojo":"#FF5722", "verde":"#4CAF50"}
 testing = False
 
 __title__ = 'Wave Client API'
-__version__ = '1.6.0'
+__version__ = '1.7.0'
 
 class SendThread(QThread):
     finished = pyqtSignal()
@@ -1035,14 +1035,18 @@ class App(QtWidgets.QWidget):
         self.newCustomerBtn = QtWidgets.QPushButton("New Customer")
         self.newCustomerBtn.clicked.connect(self.new_customer)
 
-        #####  Body invoice
+        emailSubjectLabel = QtWidgets.QLabel("Email Subject")
+        self.emailSubjectEntry = QtWidgets.QLineEdit()
 
+        #####  Body invoice
         note_label = QtWidgets.QLabel("Message")
         self.note_entry = QtWidgets.QTextEdit()
         self.note_entry.setPlaceholderText("Optional")
 
-        emailSubjectLabel = QtWidgets.QLabel("Email Subject")
-        self.emailSubjectEntry = QtWidgets.QLineEdit()
+        footerLabel = QtWidgets.QLabel("Footer")
+        self.footerEntry = QtWidgets.QLineEdit()
+
+        
 
        
         # lista de productos
@@ -1104,17 +1108,19 @@ class App(QtWidgets.QWidget):
         left_layout.addWidget(self.emailSubjectEntry, 5, 1)
         left_layout.addWidget(note_label, 6, 0)
         left_layout.addWidget(self.note_entry, 6, 1)
+        left_layout.addWidget(footerLabel, 7, 0)
+        left_layout.addWidget(self.footerEntry, 7, 1)
         
-        left_layout.addWidget(itemsLabel, 7, 0)
-        left_layout.addWidget(self.itemsCBox, 7, 1)
-        left_layout.addWidget(self.addItemBtn, 7,2)
-        left_layout.addWidget(self.newItemBtn, 7,3)
-        left_layout.addWidget(self.itemsTable, 8, 0, 1, 2)
-        left_layout.addWidget(self.attachPDFCheck, 9,0)
-        left_layout.addWidget(self.send_button, 9, 1)
-        left_layout.addWidget(nRecipientsLabel, 9,2)
-        left_layout.addWidget(self.nRecipientsTxt, 9, 3)
-        left_layout.addWidget(sendReminderBtn, 10,0)
+        left_layout.addWidget(itemsLabel, 8, 0)
+        left_layout.addWidget(self.itemsCBox, 8, 1)
+        left_layout.addWidget(self.addItemBtn, 8,2)
+        left_layout.addWidget(self.newItemBtn, 8,3)
+        left_layout.addWidget(self.itemsTable, 9, 0, 1, 2)
+        left_layout.addWidget(self.attachPDFCheck, 10,0)
+        left_layout.addWidget(self.send_button, 10, 1)
+        left_layout.addWidget(nRecipientsLabel, 10,2)
+        left_layout.addWidget(self.nRecipientsTxt, 10, 3)
+        left_layout.addWidget(sendReminderBtn, 11,0)
         
         
         
